@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compliance Portal Enterprise — Zehnder Governance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--ink:#07100a;--forest:#0b1f12;--pine:#132d1a;--moss:#245430;--sage:#357a45;--gold:#c08c28;--gold-l:#d4a94a;--border:rgba(192,140,40,.13);--radius:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}
+body{background:var(--forest);color:#fff;font-family:'Outfit',sans-serif;min-height:100vh;line-height:1.6;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--gold);}
+a{text-decoration:none;color:inherit;}
+#loadingScreen{position:fixed;inset:0;background:var(--forest);z-index:9998;display:flex;align-items:center;justify-content:center;}
+#loadingScreen.hidden{display:none;}
+.loader{width:32px;height:32px;border:2.5px solid rgba(192,140,40,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#authOverlay{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+#authOverlay.hidden{display:none;}
+.auth-box{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:420px;width:100%;text-align:center;}
+.auth-logo{font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:28px;}
+.auth-box h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#fff;margin-bottom:8px;}
+.auth-box p{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:28px;line-height:1.6;font-weight:300;}
+.auth-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;font-size:14px;color:#fff;font-family:'Outfit',sans-serif;margin-bottom:12px;outline:none;}
+.auth-input:focus{border-color:rgba(192,140,40,.4);}
+.auth-input::placeholder{color:rgba(255,255,255,.3);}
+.auth-btn{width:100%;background:var(--gold);color:var(--ink);border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;margin-top:4px;}
+.auth-btn:hover{background:var(--gold-l);}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;}
+.auth-err{font-size:12px;color:#e07070;margin-top:8px;display:none;}
+.auth-info{font-size:12px;color:rgba(255,255,255,.35);margin-top:16px;line-height:1.6;}
+.auth-info a{color:var(--gold);}
+.auth-divider{border:none;border-top:1px solid rgba(255,255,255,.08);margin:20px 0;}
+.forgot-link{font-size:12px;color:var(--gold);cursor:pointer;margin-top:12px;display:block;}
+.no-access-box{text-align:center;}
+.no-access-box .icon{font-size:48px;margin-bottom:16px;}
+.no-access-box h2{font-family:'Cormorant Garamond',serif;font-size:24px;color:#fff;margin-bottom:8px;}
+.no-access-box p{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:24px;line-height:1.6;}
+.buy-btn{display:inline-block;background:var(--gold);color:var(--ink);padding:12px 28px;border-radius:9px;font-size:14px;font-weight:600;}
+header{background:rgba(7,16,10,.98);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.lm{width:34px;height:34px;border-radius:8px;background:linear-gradient(145deg,var(--moss),var(--pine));display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:var(--gold);}
+.ln{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:#fff;}.ln em{color:var(--gold);font-style:normal;}
+.hplan{margin-left:12px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(192,140,40,.15);color:var(--gold);border:1px solid rgba(192,140,40,.3);}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.hback{font-size:12px;color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1);padding:5px 12px;border-radius:6px;}
+.hsupport{font-size:12px;color:var(--gold);padding:5px 12px;border:1px solid rgba(192,140,40,.2);border-radius:6px;}
+.hlogout{font-size:12px;color:rgba(255,255,255,.3);padding:5px 12px;border:1px solid rgba(255,255,255,.08);border-radius:6px;cursor:pointer;background:none;font-family:'Outfit',sans-serif;}
+#userEmail{font-size:11px;color:rgba(255,255,255,.3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wrap{max-width:1100px;margin:0 auto;padding:36px 24px 64px;}
+.welcome{background:linear-gradient(135deg,rgba(19,45,26,.9),rgba(7,16,10,.98));border:1px solid var(--border);border-radius:14px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;}
+.welcome::before{content:'';position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,var(--moss),var(--gold),var(--moss));}
+.welcome h1{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,3vw,32px);font-weight:600;color:#fff;margin-bottom:6px;}
+.welcome p{font-size:13.5px;color:rgba(255,255,255,.48);font-weight:300;}
+.wmeta{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap;}
+.wm{font-size:11px;color:rgba(255,255,255,.28);}.wm strong{color:var(--gold);}
+.ent-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(192,140,40,.1);border:1px solid rgba(192,140,40,.2);border-radius:8px;padding:10px 16px;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:24px;}
+.ent-badge strong{color:var(--gold-l);}
+.status-bar{background:rgba(36,84,48,.14);border:1px solid rgba(36,84,48,.28);border-radius:8px;padding:11px 16px;margin-bottom:28px;display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.58);}
+.sdot{width:7px;height:7px;border-radius:50%;background:#6ecf90;flex-shrink:0;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.status-bar strong{color:#6ecf90;}
+.sh{font-size:10.5px;color:var(--gold);font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);}
+.sh-ent{color:var(--gold-l);}
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;}
+.qa-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--radius);padding:20px;transition:all .25s;}
+.qa-card:hover{border-color:rgba(192,140,40,.3);background:rgba(255,255,255,.07);transform:translateY(-2px);}
+.qa-icon{font-size:26px;margin-bottom:10px;}
+.qa-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
+.qa-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;}
+.qa-desc{font-size:11.5px;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:12px;}
+.qa-btn{font-size:12px;font-weight:600;color:var(--gold);}
+.radar-box{background:linear-gradient(135deg,rgba(19,45,26,.9),rgba(7,16,10,.98));border:1px solid rgba(192,140,40,.2);border-radius:14px;padding:32px;margin-bottom:32px;position:relative;overflow:hidden;}
+.radar-box::before{content:'ENTERPRISE INKLUSIVE';position:absolute;top:14px;right:14px;background:var(--gold);color:var(--ink);font-size:9px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.08em;}
+.radar-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;}
+.radar-title{font-family:'Cormorant Garamond',serif;font-size:clamp(20px,2.5vw,28px);font-weight:600;color:#fff;margin-bottom:8px;}
+.radar-sub{font-size:13px;color:rgba(255,255,255,.45);line-height:1.7;font-weight:300;margin-bottom:16px;}
+.countries{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px;}
+.rc{padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600;background:rgba(255,255,255,.05);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.07);}
+.radar-next{background:rgba(192,140,40,.08);border:1px solid rgba(192,140,40,.16);border-radius:8px;padding:14px;}
+.radar-next-label{font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.radar-next-val{font-size:16px;font-weight:600;color:#fff;margin-bottom:2px;}
+.radar-next-sub{font-size:11px;color:rgba(255,255,255,.35);}
+.radar-updates{list-style:none;}
+.ru{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;gap:10px;}
+.ru:last-child{border:none;}
+.ru-icon{font-size:16px;flex-shrink:0;}
+.ru-body strong{display:block;font-size:13px;color:#fff;margin-bottom:2px;}
+.ru-body span{font-size:12px;color:rgba(255,255,255,.4);line-height:1.5;}
+.ru-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;margin-top:4px;}
+.tag-hot{background:rgba(192,57,43,.15);color:#e07070;}
+.tag-warn{background:rgba(192,140,40,.12);color:var(--gold-l);}
+.tag-ok{background:rgba(61,138,80,.1);color:#6ecf90;}
+.tcat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px;}
+.tcat{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:20px;transition:all .2s;}
+.tcat:hover{border-color:rgba(192,140,40,.2);background:rgba(255,255,255,.05);}
+.tcat-flag{font-size:20px;margin-bottom:8px;}
+.tcat-name{font-size:13.5px;font-weight:600;color:#fff;margin-bottom:3px;}
+.tcat-count{font-size:11px;color:var(--gold);font-weight:600;margin-bottom:10px;}
+.tcat-items{list-style:none;}
+.tcat-items li{font-size:11.5px;color:rgba(255,255,255,.45);padding:3px 0;display:flex;gap:5px;}
+.tcat-items li::before{content:'→';color:var(--gold);font-size:10px;}
+.tcat-btn{display:block;margin-top:12px;text-align:center;padding:7px;border-radius:6px;font-size:12px;font-weight:600;background:rgba(192,140,40,.1);border:1px solid rgba(192,140,40,.15);color:var(--gold-l);transition:all .2s;}
+.tcat-btn:hover{background:var(--gold);color:var(--ink);}
+.audit-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:28px;margin-bottom:32px;}
+.audit-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;}
+.audit-info h3{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:#fff;margin-bottom:8px;}
+.audit-info p{font-size:13px;color:rgba(255,255,255,.45);line-height:1.7;margin-bottom:14px;}
+.audit-steps{list-style:none;}
+.audit-steps li{font-size:12.5px;color:rgba(255,255,255,.55);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;gap:10px;}
+.audit-steps li:last-child{border:none;}
+.audit-num{width:22px;height:22px;border-radius:50%;background:rgba(192,140,40,.15);border:1px solid rgba(192,140,40,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0;margin-top:1px;}
+.audit-cta{background:rgba(192,140,40,.06);border:1px solid rgba(192,140,40,.16);border-radius:10px;padding:22px;text-align:center;}
+.audit-cta .price{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:4px;}
+.audit-cta .price-note{font-size:12px;color:rgba(255,255,255,.3);margin-bottom:14px;}
+.audit-cta .incl{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:18px;line-height:1.6;}
+.abtn{display:block;padding:11px;border-radius:8px;font-size:13px;font-weight:600;text-align:center;background:var(--gold);color:var(--ink);margin-bottom:8px;}
+.abtn:hover{background:var(--gold-l);}
+.scall-box{background:rgba(36,84,48,.08);border:1px solid rgba(36,84,48,.25);border-radius:var(--radius);padding:28px;display:flex;align-items:center;justify-content:space-between;gap:28px;flex-wrap:wrap;margin-bottom:32px;}
+.scall-left h3{font-family:'Cormorant Garamond',serif;font-size:22px;color:#fff;margin-bottom:6px;}
+.scall-left p{font-size:13px;color:rgba(255,255,255,.45);line-height:1.6;max-width:500px;font-weight:300;}
+.scall-right{text-align:center;flex-shrink:0;}
+.scall-price{font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--sage);line-height:1;margin-bottom:3px;}
+.scall-note{font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px;}
+.scall-btn{display:inline-block;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;background:var(--moss);color:#fff;}
+.support-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.support-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:20px;text-align:center;}
+.support-icon{font-size:28px;margin-bottom:10px;}
+.support-title{font-size:13.5px;font-weight:600;color:#fff;margin-bottom:5px;}
+.support-desc{font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:12px;}
+.support-btn{display:inline-block;padding:8px 16px;border-radius:7px;font-size:12px;font-weight:600;background:rgba(192,140,40,.1);border:1px solid rgba(192,140,40,.2);color:var(--gold-l);}
+.priority-badge{display:inline-block;background:rgba(192,140,40,.15);border:1px solid rgba(192,140,40,.3);color:var(--gold);font-size:9px;font-weight:800;letter-spacing:.08em;padding:2px 8px;border-radius:10px;text-transform:uppercase;margin-bottom:8px;}
+@media(max-width:960px){.qa-grid,.tcat-grid,.radar-grid,.audit-grid,.support-grid{grid-template-columns:1fr!important;}.scall-box{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen"><div class="loader"></div></div>
+
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">Zehnder Governance</div>
+    <div id="loginBox">
+      <h2>⭐ Enterprise-Zugang</h2>
+      <p>Melden Sie sich mit Ihren Zugangsdaten an. Nach dem Kauf erhalten Sie per E-Mail einen Link zum Einrichten Ihres Passworts.</p>
+      <input type="email" id="emailInput" class="auth-input" placeholder="E-Mail-Adresse">
+      <input type="password" id="passwordInput" class="auth-input" placeholder="Passwort">
+      <div class="auth-err" id="authError"></div>
+      <button class="auth-btn" id="loginBtn" onclick="doLogin()">Einloggen →</button>
+      <span class="forgot-link" onclick="doForgotPassword()">Passwort vergessen?</span>
+      <hr class="auth-divider">
+      <div class="auth-info">Noch kein Enterprise-Abo? <a href="https://buy.stripe.com/bJe3cncJE9S16HX5Re5Rm05">Enterprise abonnieren — CHF 299/Mo. →</a></div>
+    </div>
+    <div id="noAccessBox" class="no-access-box" style="display:none">
+      <div class="icon">🔒</div>
+      <h2>Kein Enterprise-Zugang</h2>
+      <p>Ihr Account hat keinen Zugang zum Enterprise-Portal. Bitte abonnieren Sie die Compliance Flatrate Enterprise.</p>
+      <a href="https://buy.stripe.com/bJe3cncJE9S16HX5Re5Rm05" class="buy-btn">Enterprise abonnieren — CHF 299/Mo. →</a>
+      <hr class="auth-divider">
+      <div class="auth-info"><span style="cursor:pointer;color:var(--gold);" onclick="doLogout()">Anderes Konto verwenden</span></div>
+    </div>
+    <div id="resetBox" style="display:none">
+      <div class="icon" style="font-size:48px;margin-bottom:16px;">📧</div>
+      <h2>E-Mail gesendet</h2>
+      <p>Wir haben Ihnen einen Link gesendet. Bitte prüfen Sie Ihren Posteingang.</p>
+      <button class="auth-btn" onclick="showLoginBox()">Zurück zum Login</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo"><div class="lm">Z</div><div class="ln">ZEHNDER <em>GOVERNANCE</em></div></div>
+  <span class="hplan">⭐ Enterprise</span>
+  <div class="hright">
+    <span id="userEmail"></span>
+    <a href="mailto:zehndergovernance@gmail.com?subject=Priority%20Support%20Enterprise" class="hsupport">⚡ Priority Support</a>
+    <a href="https://zehndergovernance.com" class="hback">← Website</a>
+    <button class="hlogout" onclick="doLogout()">Ausloggen</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="welcome">
+    <h1>Willkommen im Enterprise-Portal</h1>
+    <p>Vollständiger Zugriff auf alle Enterprise-Leistungen — Templates, Schulungen, Regulatory Radar, TIA-Modul, Audit-Check und Priority Support.</p>
+    <div class="wmeta">
+      <span class="wm"><strong>Plan:</strong> Compliance Flatrate Enterprise</span>
+      <span class="wm"><strong>Preis:</strong> CHF 299 / Monat</span>
+      <span class="wm"><strong>Support:</strong> Priority 24h</span>
+    </div>
+  </div>
+
+  <div class="ent-badge">
+    ⭐ <strong>Enterprise aktiv</strong> &nbsp;·&nbsp; 130+ Vorlagen &nbsp;·&nbsp; Regulatory Radar &nbsp;·&nbsp; TIA-Modul &nbsp;·&nbsp; Audit-Check &nbsp;·&nbsp; Priority Support 24h
+  </div>
+
+  <div class="status-bar">
+    <div class="sdot"></div>
+    <strong>Alle Systeme aktiv.</strong>&nbsp;Q2 2026 Regulatory Radar erscheint im April — Sie werden per E-Mail benachrichtigt.
+  </div>
+
+  <div class="sh sh-ent">Schnellzugriff</div>
+  <div class="qa-grid">
+    <a href="https://zg-template-bibliothek.vercel.app" target="_blank" class="qa-card">
+      <div class="qa-icon">📚</div><div class="qa-label">Vorlagen</div>
+      <div class="qa-title">Template-Bibliothek</div>
+      <div class="qa-desc">130+ Vorlagen DE/EN für CH, EU, UK, USA und 9 weitere Jurisdiktionen</div>
+      <div class="qa-btn">Öffnen →</div>
+    </a>
+    <a href="https://zg-academy.vercel.app" target="_blank" class="qa-card">
+      <div class="qa-icon">🎓</div><div class="qa-label">Academy</div>
+      <div class="qa-title">Compliance Academy</div>
+      <div class="qa-desc">11 Schulungsmodule inkl. Zertifikat — SCORM-Export für Ihr LMS verfügbar</div>
+      <div class="qa-btn">Öffnen →</div>
+    </a>
+    <a href="https://zg-country-intelligence.vercel.app" target="_blank" class="qa-card">
+      <div class="qa-icon">🌍</div><div class="qa-label">TIA-Modul</div>
+      <div class="qa-title">Country Intelligence</div>
+      <div class="qa-desc">13 Länder-Risikoprofile nach EDPB-Kriterien inkl. vorausgefüllte TIA-Vorlagen</div>
+      <div class="qa-btn">Öffnen →</div>
+    </a>
+    <a href="mailto:zehndergovernance@gmail.com?subject=Priority%20Support%20Enterprise" class="qa-card">
+      <div class="qa-icon">⚡</div><div class="qa-label">Priority Support</div>
+      <div class="qa-title">24h Antwortzeit</div>
+      <div class="qa-desc">Direkter Zugang — Antwort garantiert innert 24 Stunden</div>
+      <div class="qa-btn">Kontaktieren →</div>
+    </a>
+  </div>
+
+  <div class="sh sh-ent">⭐ Exklusiv Enterprise — Regulatory Radar</div>
+  <div class="radar-box">
+    <div class="radar-grid">
+      <div>
+        <div class="radar-title">Regulatorische Lage Q1 2026</div>
+        <div class="radar-sub">Quartalsweise Lageberichte aus 13 Jurisdiktionen mit konkreten Handlungsempfehlungen — im Enterprise inklusive.</div>
+        <div class="countries">
+          <span class="rc">🇨🇭 nDSG</span><span class="rc">🇪🇺 DSGVO</span><span class="rc">🇬🇧 UK GDPR</span>
+          <span class="rc">🇺🇸 CCPA</span><span class="rc">🇨🇳 PIPL</span><span class="rc">🇧🇷 LGPD</span>
+          <span class="rc">🇮🇳 DPDPA</span><span class="rc">🇸🇬 PDPA</span><span class="rc">🤖 EU AI Act</span>
+        </div>
+        <div class="radar-next">
+          <div class="radar-next-label">Nächste Ausgabe</div>
+          <div class="radar-next-val">Q2 2026 — April</div>
+          <div class="radar-next-sub">Sie werden per E-Mail benachrichtigt sobald verfügbar.</div>
+        </div>
+      </div>
+      <div>
+        <ul class="radar-updates">
+          <li class="ru"><span class="ru-icon">🔴</span><div class="ru-body"><strong>EU AI Act — Verbotene Praktiken in Kraft</strong><span>Seit 2. Februar 2026 gelten die ersten verbotenen KI-Praktiken. KI-Systeme auf Konformität prüfen.</span><span class="ru-tag tag-hot">Sofortmassnahme</span></div></li>
+          <li class="ru"><span class="ru-icon">🟡</span><div class="ru-body"><strong>DSGVO — DSA Schnittstellen 2026</strong><span>Neue Pflichten für Plattformen durch Digital Services Act — DSFAs erforderlich.</span><span class="ru-tag tag-warn">Bis Q3 2026</span></div></li>
+          <li class="ru"><span class="ru-icon">🟡</span><div class="ru-body"><strong>UK GDPR — Post-Brexit Adequacy Review</strong><span>UK führt Überprüfung der Adequacy-Entscheidungen durch. Transfer-Dokumentation aktuell halten.</span><span class="ru-tag tag-warn">Beobachten</span></div></li>
+          <li class="ru"><span class="ru-icon">🟢</span><div class="ru-body"><strong>CH nDSG — Vollzug stabil</strong><span>EDÖB hat erste Empfehlungen publiziert. Ihre Compliance-Dokumentation ist aktuell.</span><span class="ru-tag tag-ok">Status: Gut</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="sh">Template-Bibliothek — 130+ Dokumente</div>
+  <div class="tcat-grid">
+    <div class="tcat"><div class="tcat-flag">🔒</div><div class="tcat-name">Datenschutz CH/EU/UK</div><div class="tcat-count">38 Vorlagen</div><ul class="tcat-items"><li>RoPA / DPIA / Breach Response</li><li>Datenschutzerklärungen</li><li>Löschkonzept</li></ul><a href="https://drive.google.com/drive/u/2/folders/1KZAsFfCGJrGt1sQX3uqdwhR4fMIhRKwV" target="_blank" class="tcat-btn">Öffnen →</a></div>
+    <div class="tcat"><div class="tcat-flag">📋</div><div class="tcat-name">Verträge & Transfers</div><div class="tcat-count">24 Vorlagen</div><ul class="tcat-items"><li>AVV / DPA</li><li>EU SCCs / UK IDTA</li><li>TIA-Vorlagen</li></ul><a href="https://drive.google.com/drive/u/2/folders/1TRQQolgnvqQtP6CTehFPZ4WqQS08TfTJ" target="_blank" class="tcat-btn">Öffnen →</a></div>
+    <div class="tcat"><div class="tcat-flag">🤖</div><div class="tcat-name">KI-Governance / EU AI Act</div><div class="tcat-count">22 Vorlagen</div><ul class="tcat-items"><li>AI Policy / Risk Assessment</li><li>AI Inventory</li><li>AI Literacy Nachweis</li></ul><a href="https://drive.google.com/drive/u/2/folders/1cWvExQUcKFCsvQI65Wl-2rdKAXagBdcj" target="_blank" class="tcat-btn">Öffnen →</a></div>
+    <div class="tcat"><div class="tcat-flag">🇺🇸</div><div class="tcat-name">USA / CCPA / CPRA</div><div class="tcat-count">18 Vorlagen</div><ul class="tcat-items"><li>California Privacy Notice</li><li>Do Not Sell</li><li>Service Provider Agreement</li></ul><a href="https://drive.google.com/drive/u/2/folders/1ArGPLsvpByJDFH1C2hEXfK9Q_kgoTslD" target="_blank" class="tcat-btn">Öffnen →</a></div>
+    <div class="tcat"><div class="tcat-flag">🌏</div><div class="tcat-name">Asien (CN/SG/IN/VN)</div><div class="tcat-count">16 Vorlagen</div><ul class="tcat-items"><li>PIPL China</li><li>PDPA Singapur</li><li>DPDPA India</li></ul><a href="https://drive.google.com/drive/u/2/folders/1drPqVyr2FhDZbtCTvB8v24DgVfQIKxGQ" target="_blank" class="tcat-btn">Öffnen →</a></div>
+    <div class="tcat"><div class="tcat-flag">🎓</div><div class="tcat-name">Schulungsmodule S01–S13</div><div class="tcat-count">11 Module</div><ul class="tcat-items"><li>DSGVO / nDSG / EU AI Act</li><li>Transfers / HR / Marketing</li><li>Mit Zertifikat via Academy</li></ul><a href="https://drive.google.com/drive/u/2/folders/1h1kNjdWqfBW4Gdnf1dBsDhKmLNv79z2f" target="_blank" class="tcat-btn">Öffnen →</a></div>
+  </div>
+
+  <div class="sh sh-ent">⭐ Exklusiv Enterprise — Jährlicher Audit-Check</div>
+  <div class="audit-box">
+    <div class="audit-grid">
+      <div class="audit-info">
+        <h3>Ihr persönlicher Compliance-Check</h3>
+        <p>Einmal jährlich ein persönliches Audit-Gespräch mit Alex Zehnder — individuell auf Ihre Situation, Systeme und Jurisdiktionen zugeschnitten.</p>
+        <ul class="audit-steps">
+          <li><div class="audit-num">1</div>Review Ihrer aktuellen Compliance-Dokumentation</li>
+          <li><div class="audit-num">2</div>Identifikation offener Lücken und Prioritäten</li>
+          <li><div class="audit-num">3</div>Besprechung regulatorischer Änderungen im letzten Jahr</li>
+          <li><div class="audit-num">4</div>Massnahmenplan für die nächsten 12 Monate</li>
+          <li><div class="audit-num">5</div>Schriftliche Zusammenfassung mit konkreten Next Steps</li>
+        </ul>
+      </div>
+      <div class="audit-cta">
+        <div class="price">2h</div>
+        <div class="price-note">Persönliches Gespräch · jährlich inklusive</div>
+        <div class="incl">✓ Im Enterprise Abo inklusive<br>✓ Video-Call oder vor Ort<br>✓ Schriftliche Zusammenfassung<br>✓ Direkt mit Alex Zehnder</div>
+        <a href="mailto:zehndergovernance@gmail.com?subject=Audit-Check%20Termin%20Enterprise" class="abtn">Audit-Check vereinbaren →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sh sh-ent">⭐ Exklusiv Enterprise — Quarterly Strategy Call</div>
+  <div class="scall-box">
+    <div class="scall-left">
+      <h3>30 Min. persönliches Strategiegespräch</h3>
+      <p>Einmal pro Quartal direkt mit Alex Zehnder — aktuelle Compliance-Fragen, neue Produktentwicklungen oder regulatorische Unsicherheiten.</p>
+    </div>
+    <div class="scall-right">
+      <div class="scall-price">4×/Jahr</div>
+      <div class="scall-note">Im Enterprise inklusive</div>
+      <a href="mailto:zehndergovernance@gmail.com?subject=Strategy%20Call%20Q2%202026" class="scall-btn">Call vereinbaren →</a>
+    </div>
+  </div>
+
+  <div class="sh">Priority Support</div>
+  <div class="support-grid">
+    <div class="support-card">
+      <div class="priority-badge">Priority 24h</div>
+      <div class="support-icon">⚡</div>
+      <div class="support-title">E-Mail Support</div>
+      <div class="support-desc">Technische Fragen, Compliance-Fragen — direkt und persönlich beantwortet innert 24 Stunden.</div>
+      <a href="mailto:zehndergovernance@gmail.com?subject=Enterprise%20Priority%20Support" class="support-btn">Support kontaktieren →</a>
+    </div>
+    <div class="support-card">
+      <div class="support-icon">📚</div>
+      <div class="support-title">Vorlagen-Updates</div>
+      <div class="support-desc">Bei Gesetzesänderungen werden Vorlagen aktualisiert — Sie werden per E-Mail informiert.</div>
+      <a href="https://drive.google.com/drive/folders/18Meb3tzw60pHLQjDEaTjm0OrrwrPnpO0" target="_blank" class="support-btn">Vorlagen prüfen →</a>
+    </div>
+    <div class="support-card">
+      <div class="support-icon">⚙️</div>
+      <div class="support-title">Abo verwalten</div>
+      <div class="support-desc">Zahlungsmethode ändern, Rechnungen einsehen oder Abo kündigen — jederzeit per E-Mail.</div>
+      <a href="mailto:zehndergovernance@gmail.com?subject=Abo%20verwalten%20Enterprise" class="support-btn">Anfrage senden →</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://rjvdmyjuqtchznlhffzo.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqdmRteWp1cXRjaHpubGhmZnpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNTkzNDksImV4cCI6MjA4NjkzNTM0OX0.iJWzPFxAI-ms7qCD6s0-Sxuqksy0ix1X-l1uNmxCZu0'
+const ALLOWED_PLANS = ['enterprise']
+
+const { createClient } = supabase
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession()
+  if (session) {
+    document.getElementById('userEmail').textContent = session.user.email
+    await checkAccess(session.user.id)
+  } else {
+    document.getElementById('loadingScreen').classList.add('hidden')
+  }
+}
+
+async function checkAccess(userId) {
+  const { data } = await sb.from('user_subscriptions').select('plan,status').eq('user_id', userId).eq('status', 'active')
+  document.getElementById('loadingScreen').classList.add('hidden')
+  const hasAccess = data?.some(s => ALLOWED_PLANS.includes(s.plan))
+  if (hasAccess) {
+    document.getElementById('authOverlay').classList.add('hidden')
+  } else {
+    document.getElementById('loginBox').style.display = 'none'
+    document.getElementById('noAccessBox').style.display = 'block'
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('emailInput').value.trim()
+  const password = document.getElementById('passwordInput').value
+  const btn = document.getElementById('loginBtn')
+  const err = document.getElementById('authError')
+  btn.disabled = true; btn.textContent = 'Wird angemeldet...'
+  err.style.display = 'none'
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error) {
+    err.textContent = 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.'
+    err.style.display = 'block'
+    btn.disabled = false; btn.textContent = 'Einloggen →'
+    return
+  }
+  document.getElementById('userEmail').textContent = data.user.email
+  await checkAccess(data.user.id)
+  btn.disabled = false; btn.textContent = 'Einloggen →'
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('emailInput').value.trim()
+  if (!email) { alert('Bitte geben Sie Ihre E-Mail-Adresse ein.'); return }
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href })
+  document.getElementById('loginBox').style.display = 'none'
+  document.getElementById('resetBox').style.display = 'block'
+}
+
+function showLoginBox() {
+  document.getElementById('loginBox').style.display = 'block'
+  document.getElementById('resetBox').style.display = 'none'
+}
+
+async function doLogout() {
+  await sb.auth.signOut()
+  document.getElementById('authOverlay').classList.remove('hidden')
+  document.getElementById('noAccessBox').style.display = 'none'
+  document.getElementById('loginBox').style.display = 'block'
+  document.getElementById('userEmail').textContent = ''
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !document.getElementById('authOverlay').classList.contains('hidden')) doLogin() })
+init()
+</script>
+</body>
+</html>
