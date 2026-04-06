@@ -379,5 +379,16 @@ async function doForgotPassword() {
   document.getElementById('loginBox').style.display = 'none'
   document.getElementById('resetBox').style.display = 'block'
 }
+function doLogout() {
+  sb.auth.signOut().then(() => { location.reload() })
+}
 
-fun
+function showLoginBox() {
+  document.getElementById('resetBox').style.display = 'none'
+  document.getElementById('loginBox').style.display = 'block'
+}
+
+init()
+</script>
+</body>
+</html>
